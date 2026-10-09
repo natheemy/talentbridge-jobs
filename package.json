@@ -1,0 +1,26 @@
+{
+  "name": "linkedin-jobs-pipeline",
+  "version": "1.0.0",
+  "description": "Daily IT jobs \u2192 4 buckets \u2192 AI summaries \u2192 post images \u2192 LinkedIn Company Page",
+  "main": "src/index.js",
+  "scripts": {
+    "generate": "node src/index.js generate",
+    "render": "node src/index.js render",
+    "post": "node src/index.js publish",
+    "daily": "node src/index.js run",
+    "postinstall": "playwright install chromium",
+    "rerank": "node src/index.js rerank"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "cheerio": "^1.2.0",
+    "dotenv": "^18.0.6",
+    "playwright": "^1.64.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,87 @@
+name: Daily LinkedIn jobs post
+
+on:
+  schedule:
+    # 03:20 UTC = 08:50 IST. GitHub may start scheduled runs a few minutes late,
+    # so the draft is built just before 9 AM.
+    - cron: '20 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-jobs-post
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Build today's draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      date: ${{ steps.date.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - id: date
+        run: echo "date=$(TZ=Asia/Kolkata date +%F)" >> "$GITHUB_OUTPUT"
+      - name: Fetch, summarise, render
+        run: node src/index.js generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BRAND_NAME: ${{ vars.BRAND_NAME }}
+          BRAND_HANDLE: ${{ vars.BRAND_HANDLE }}
+          BRAND_HASHTAGS: ${{ vars.BRAND_HASHTAGS }}
+          BRAND_TAGLINE: ${{ vars.BRAND_TAGLINE }}
+          BRAND_VALUES: ${{ vars.BRAND_VALUES }}
+          BRAND_SCRIPT: ${{ vars.BRAND_SCRIPT }}
+          BRAND_FOOTER: ${{ vars.BRAND_FOOTER }}
+          BRAND_LOGO: ${{ vars.BRAND_LOGO }}
+          JOB_LOCATION: ${{ vars.JOB_LOCATION }}
+          APPROVE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: draft-${{ steps.date.outputs.date }}
+          path: out/${{ steps.date.outputs.date }}
+          retention-days: 14
+
+  publish:
+    name: Publish to LinkedIn
+    needs: draft
+    runs-on: ubuntu-latest
+    # Approval gate: in Settings → Environments → "linkedin", add yourself as a
+    # required reviewer. GitHub then emails you and waits for "Approve".
+    # Remove the reviewer to post fully automatically.
+    environment: linkedin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: draft-${{ needs.draft.outputs.date }}
+          path: out/${{ needs.draft.outputs.date }}
+      - name: Publish post
+        run: node src/index.js publish out/${{ needs.draft.outputs.date }}
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_ORG_URN: ${{ secrets.LINKEDIN_ORG_URN }}
+          LINKEDIN_API_VERSION: ${{ vars.LINKEDIN_API_VERSION }}
+      - name: Remember posted jobs (no repeats tomorrow)
+        run: |
+          git config user.name "jobs-bot"
+          git config user.email "jobs-bot@users.noreply.github.com"
+          git add data/posted.json
+          git diff --cached --quiet || git commit -m "Posted jobs for ${{ needs.draft.outputs.date }}"
+          git push

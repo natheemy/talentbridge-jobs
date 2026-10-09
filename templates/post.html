@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Job opportunities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0B1B3F;
+    --blue: #1A5CE6;
+    --ink: #13213F;
+    --muted: #5A6785;
+    --bg: #F6F8FC;
+    --s: 1; /* auto-fit scale for the card list, lowered by render.js if content overflows */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1350px; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Outfit', system-ui, sans-serif;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 60px 30px;
+  }
+  /* soft arc, bottom right */
+  body::after {
+    content: '';
+    position: absolute;
+    width: 760px; height: 520px;
+    right: -260px; bottom: -330px;
+    border-radius: 50%;
+    background: #DCE6FA;
+    z-index: 0;
+  }
+  body > * { position: relative; z-index: 1; }
+
+  /* Brand row */
+  .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .brand .word { font-weight: 800; font-size: 44px; letter-spacing: -0.03em; line-height: 1; color: var(--navy); }
+  .brand .word em { font-style: normal; color: var(--blue); }
+  .brand .tag { font-size: 16px; font-weight: 500; margin-top: 6px; color: var(--navy); }
+  .brand img { height: 64px; width: auto; display: block; }
+  .values {
+    border-left: 2px solid var(--navy);
+    padding: 4px 0 4px 32px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: .2em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+
+  /* Headline */
+  .hero { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 18px; }
+  .h1 { font-weight: 900; line-height: .86; letter-spacing: -0.035em; }
+  .h1 .job { display: block; font-size: 104px; color: var(--navy); }
+  .h1 .opp { display: block; font-size: 80px; color: var(--blue); margin-top: 4px; }
+  .script {
+    font-family: 'Caveat', cursive;
+    font-size: 40px;
+    line-height: 1.02;
+    color: var(--navy);
+    transform: rotate(-9deg);
+    margin: 18px 10px 0 0;
+  }
+  .script svg { display: block; margin-top: 4px; }
+  .explore {
+    font-size: 21px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase;
+    margin: 14px 0 0 4px;
+  }
+
+  /* Cards */
+  .list {
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: calc(14px * var(--s));
+    margin: 18px 0 22px;
+    min-height: 0;
+  }
+  .card {
+    display: grid;
+    grid-template-columns: calc(80px * var(--s)) 2px 1fr;
+    column-gap: calc(22px * var(--s));
+    align-items: center;
+    padding: calc(16px * var(--s)) calc(24px * var(--s));
+    border-radius: 26px;
+    background: var(--tint);
+  }
+  .num {
+    width: calc(76px * var(--s)); height: calc(76px * var(--s));
+    border-radius: 50%;
+    background: var(--tint2);
+    color: var(--accent);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: calc(44px * var(--s));
+    justify-self: center;
+  }
+  .rule { width: 2px; align-self: stretch; background: var(--tint2); }
+  .body { min-width: 0; }
+  .title {
+    font-weight: 800; font-size: calc(34px * var(--s)); letter-spacing: -0.015em; line-height: 1.1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .meta {
+    display: flex; align-items: center; gap: calc(16px * var(--s));
+    font-size: calc(23px * var(--s)); font-weight: 500; margin-top: calc(5px * var(--s));
+    white-space: nowrap; overflow: hidden;
+  }
+  .meta .co { flex: none; max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
+  .meta .loc { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  .meta .loc span { overflow: hidden; text-overflow: ellipsis; }
+  .meta .loc svg { flex: none; width: calc(22px * var(--s)); height: calc(22px * var(--s)); }
+  .meta .exp { flex: none; color: var(--muted); }
+  .summary {
+    font-size: calc(20px * var(--s)); line-height: 1.35; color: var(--muted); margin-top: calc(7px * var(--s));
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .skills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: calc(9px * var(--s)); max-height: calc(32px * var(--s)); overflow: hidden; }
+  .skills span {
+    background: rgba(255,255,255,.75);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: calc(3px * var(--s)) calc(13px * var(--s));
+    font-size: calc(17px * var(--s)); font-weight: 600;
+  }
+
+  /* Footer */
+  .foot { display: flex; justify-content: space-between; align-items: flex-end; }
+  .foot .left { font-size: 16px; font-weight: 500; letter-spacing: .2em; line-height: 1.5; text-transform: uppercase; }
+  .foot .left::after { content: ''; display: block; width: 74px; height: 2px; background: var(--navy); margin-top: 16px; }
+  .foot .right { text-align: right; font-size: 22px; line-height: 1.25; color: var(--navy); }
+  .foot .right b { font-weight: 800; }
+  .foot .right b em { font-style: normal; color: var(--blue); }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">{{BRAND_BLOCK}}</div>
+    <div class="values">{{VALUES}}</div>
+  </div>
+
+  <div class="hero">
+    <h1 class="h1"><span class="job">JOB</span><span class="opp">OPPORTUNITIES</span></h1>
+    <div class="script">{{SCRIPT}}
+      <svg width="190" height="34" viewBox="0 0 190 34" aria-hidden="true"><path d="M4 28 C 60 12, 120 6, 186 4" stroke="#1A5CE6" stroke-width="7" fill="none" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+  <p class="explore">{{EXPLORE}}</p>
+
+  <main class="list">
+    {{JOBS}}
+  </main>
+
+  <footer class="foot">
+    <div class="left">{{FOOT_LEFT}}</div>
+    <div class="right">Follow <b>{{BRAND_WORD}}</b><br>for more opportunities</div>
+  </footer>
+</body>
+</html>
