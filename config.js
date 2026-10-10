@@ -115,9 +115,13 @@ module.exports = {
     ],
   },
 
+  // AI for summaries/skills/quality. Set ONE key. If both are set, AI_PROVIDER picks (default: gemini).
   ai: {
+    provider: env('AI_PROVIDER', ''), // 'gemini' | 'anthropic' | '' (auto)
     apiKey: env('ANTHROPIC_API_KEY', ''),
     model: env('ANTHROPIC_MODEL', 'claude-haiku-5-5'),
+    geminiApiKey: env('GEMINI_API_KEY', ''),
+    geminiModel: env('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
     concurrency: Number(env('AI_CONCURRENCY', 4)),
   },
 

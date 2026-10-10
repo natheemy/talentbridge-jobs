@@ -12,7 +12,7 @@ const config = require('../config');
 const { searchJobs, fetchJobDetail, sleep } = require('./source-linkedin');
 const { bucketFor } = require('./classify');
 const { preScore, passesFilters, shortlist } = require('./rank');
-const { enrichAll, usingAI } = require('./enrich');
+const { enrichAll, usingAI, aiLabel } = require('./enrich');
 const { renderAll } = require('./render');
 const { buildCaption } = require('./caption');
 const { sendTelegramPreview } = require('./notify');
@@ -146,7 +146,7 @@ async function generate() {
   }
 
   // 4. Summaries, key skills, quality score, final bucket
-  console.log(`[3/5] Summarising with ${usingAI() ? `Claude (${config.ai.model})` : 'rule-based fallback (set ANTHROPIC_API_KEY for AI summaries)'}…`);
+  console.log(`[3/5] Summarising with ${usingAI() ? aiLabel() : 'rule-based fallback (set GEMINI_API_KEY or ANTHROPIC_API_KEY for AI summaries)'}…`);
   const enriched = await enrichAll(detailed);
 
   fs.writeFileSync(path.join(outDir, 'candidates.json'), JSON.stringify(enriched, null, 2));

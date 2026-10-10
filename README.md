@@ -6,7 +6,7 @@ Every morning at 9 AM IST this builds a LinkedIn Company Page post of fresh IT j
 LinkedIn job search (last 24h, India)
    → sorted into 4 internal buckets (Freshers, Management, Dev/Test/Cloud, AI/ML/FDE)
    → job description, applicant count and posting time fetched for the best candidates
-   → Claude writes a 2-line summary + key skills + a quality score (rule-based fallback if no key)
+   → Gemini or Claude writes a 2-line summary + key skills + a quality score (rule-based fallback if no key)
    → each bucket ranked, top 5 shortlisted (see "How jobs are ranked")
    → one 1080×1350 "Job Opportunities" image per bucket, cards numbered 1–20
    → caption with numbered apply links
@@ -54,7 +54,7 @@ Bucket names never appear on the images or caption; they only decide which jobs 
 
 1. Push this folder to a **private** GitHub repo.
 2. **Settings → Secrets and variables → Actions**
-   - Secrets: `ANTHROPIC_API_KEY`, `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_ORG_URN`, optionally `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+   - Secrets: `GEMINI_API_KEY` (from aistudio.google.com) or `ANTHROPIC_API_KEY`, `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_ORG_URN`, optionally `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
    - Variables (optional): `BRAND_NAME`, `BRAND_HANDLE`, `BRAND_HASHTAGS`, `JOB_LOCATION`, `LINKEDIN_API_VERSION`
 3. **Settings → Environments → New environment** named `linkedin`. Tick **Required reviewers** and add yourself.
 4. Done. `.github/workflows/daily-jobs-post.yml` runs at 08:50 IST:

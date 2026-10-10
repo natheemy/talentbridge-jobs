@@ -1,13 +1,24 @@
-// Turns a raw job description into a 2-line summary + key skills (+ bucket check)
-// using Claude. Falls back to rule-based extraction when no API key is configured
-// or a call fails, so the pipeline never stops for lack of a summary.
+// Turns a raw job description into a 2-line summary + key skills + quality score
+// (+ bucket check) using Gemini or Claude, whichever key is configured. Falls back
+// to rule-based extraction when no key is set or a call fails, so the pipeline
+// never stops for lack of a summary.
 const config = require('../config');
 const { bucketFor, extractSkills, fallbackSummary, fallbackExperience } = require('./classify');
 
-let client = null;
-if (config.ai.apiKey) {
+function pickProvider() {
+  const { provider, apiKey, geminiApiKey } = config.ai;
+  if (provider === 'gemini' && geminiApiKey) return 'gemini';
+  if (provider === 'anthropic' && apiKey) return 'anthropic';
+  if (geminiApiKey) return 'gemini';
+  if (apiKey) return 'anthropic';
+  return null;
+}
+const PROVIDER = pickProvider();
+
+let anthropic = null;
+if (PROVIDER === 'anthropic') {
   const Anthropic = require('@anthropic-ai/sdk');
-  client = new Anthropic({ apiKey: config.ai.apiKey });
+  anthropic = new Anthropic({ apiKey: config.ai.apiKey });
 }
 
 const SYSTEM = `You summarise IT job descriptions for a LinkedIn jobs page in India.
@@ -24,20 +35,47 @@ function parseJSON(text) {
   return JSON.parse(m[0]);
 }
 
-async function enrichWithAI(job) {
+function userPrompt(job) {
   const jd = (job.description || '').slice(0, 6000);
-  const msg = await client.messages.create({
+  return `Title: ${job.position}\nCompany: ${job.company}\nLocation: ${job.location}\nSeniority: ${job.seniority}\n\nJob description:\n${jd}`;
+}
+
+async function callAnthropic(job) {
+  const msg = await anthropic.messages.create({
     model: config.ai.model,
     max_tokens: 400,
     system: SYSTEM,
-    messages: [
-      {
-        role: 'user',
-        content: `Title: ${job.position}\nCompany: ${job.company}\nLocation: ${job.location}\nSeniority: ${job.seniority}\n\nJob description:\n${jd}`,
-      },
-    ],
+    messages: [{ role: 'user', content: userPrompt(job) }],
   });
-  const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
+  return msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
+}
+
+async function callGemini(job, attempt = 1) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.ai.geminiModel}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.ai.geminiApiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt(job) }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 600 },
+    }),
+  });
+  // Free tier has per-minute limits: back off and retry on 429/503
+  if ((res.status === 429 || res.status === 503) && attempt < 4) {
+    await new Promise((r) => setTimeout(r, 5000 * attempt));
+    return callGemini(job, attempt + 1);
+  }
+  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const text = parts.map((p) => p.text || '').join('');
+  if (!text) throw new Error(`Gemini returned no text (${data.candidates?.[0]?.finishReason || 'unknown'})`);
+  return text;
+}
+
+async function enrichWithAI(job) {
+  const text = PROVIDER === 'gemini' ? await callGemini(job) : await callAnthropic(job);
   const out = parseJSON(text);
   return {
     summary: String(out.summary || '').trim(),
@@ -61,7 +99,7 @@ function enrichWithRules(job) {
 
 async function enrichJob(job) {
   let result;
-  if (client) {
+  if (PROVIDER) {
     try {
       result = await enrichWithAI(job);
     } catch (e) {
@@ -81,7 +119,7 @@ async function enrichJob(job) {
 async function enrichAll(jobs) {
   const out = new Array(jobs.length);
   let i = 0;
-  const workers = Array.from({ length: client ? config.ai.concurrency : 1 }, async () => {
+  const workers = Array.from({ length: PROVIDER ? config.ai.concurrency : 1 }, async () => {
     while (i < jobs.length) {
       const idx = i++;
       out[idx] = await enrichJob(jobs[idx]);
@@ -91,4 +129,8 @@ async function enrichAll(jobs) {
   return out;
 }
 
-module.exports = { enrichAll, usingAI: () => !!client };
+module.exports = {
+  enrichAll,
+  usingAI: () => !!PROVIDER,
+  aiLabel: () => (PROVIDER === 'gemini' ? `Gemini (${config.ai.geminiModel})` : PROVIDER === 'anthropic' ? `Claude (${config.ai.model})` : ''),
+};
